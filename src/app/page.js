@@ -24,6 +24,7 @@ const Home = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*', // Allow requests from any origin
         },
         body: JSON.stringify(memberList),
       })
