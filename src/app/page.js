@@ -1,43 +1,49 @@
 "use client"
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import Papa from "papaparse";
 
 const Home = () => {
-
-  const [memberList, setMemberList] = useState([])
+  const [memberList, setMemberList] = useState([]);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const file = e.target.file_upload.files[0]
+    const file = e.target.file_upload.files[0];
 
     Papa.parse(file, {
       header: true,
-      complete: function(results) {
-        setMemberList(results.data)
-      }}
-    )
-  }
+      complete: function (results) {
+        setMemberList(results.data);
+      }
+    });
+  };
 
   useEffect(() => {
-    if(memberList.length) {
-      fetch('http://ec2-13-55-235-138.ap-southeast-2.compute.amazonaws.com:8055/flows/trigger/e02394e9-2a4b-4ba2-9f3b-afa3f126d17b', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*', // Allow requests from any origin
-        },
-        body: JSON.stringify(memberList),
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          console.log('Success:', data);
-        })
-        .catch((error) => {
-          console.error('Error:', error);
-        });
-    }
-  }, [memberList])
+    if (memberList.length) {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', 'http://ec2-13-55-235-138.ap-southeast-2.compute.amazonaws.com:8055/flows/trigger/e02394e9-2a4b-4ba2-9f3b-afa3f126d17b');
+      xhr.setRequestHeader('Content-Type', 'application/json');
 
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const percentage = Math.round((event.loaded * 100) / event.total);
+          setUploadProgress(percentage);
+        }
+      });
+
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState === XMLHttpRequest.DONE) {
+          if (xhr.status === 200) {
+            alert('Success:', xhr.responseText);
+          } else {
+            alert('Error:', xhr.statusText);
+          }
+        }
+      };
+
+      xhr.send(JSON.stringify(memberList));
+    }
+  }, [memberList]);
 
   return (
     <>
@@ -52,7 +58,7 @@ const Home = () => {
             </div>
           </div>
           <div className="mt-5 md:col-span-2 md:mt-0">
-            <form action="#" method="POST" onSubmit={e => handleSubmit(e)}>
+            <form action="#" method="POST" onSubmit={(e) => handleSubmit(e)}>
               <div className="shadow sm:overflow-hidden sm:rounded-md">
                 <div className="space-y-6 bg-white px-4 py-5 sm:p-6">
                   <div>
@@ -95,6 +101,12 @@ const Home = () => {
                   >
                     Submit
                   </button>
+                  {uploadProgress > 0 && (
+                    <div className="ml-4">
+                      <progress value={uploadProgress} max="100" />
+                      {uploadProgress}%
+                    </div>
+                  )}
                 </div>
               </div>
             </form>
