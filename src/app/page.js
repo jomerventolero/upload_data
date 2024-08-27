@@ -21,7 +21,7 @@ const Home = () => {
   useEffect(() => {
     if (memberList.length) {
       const xhr = new XMLHttpRequest();
-      xhr.open('POST', 'http://ec2-13-55-235-138.ap-southeast-2.compute.amazonaws.com:8055/flows/trigger/e02394e9-2a4b-4ba2-9f3b-afa3f126d17b');
+      xhr.open('POST', process.local.env.WEBHOOK_URL);
       xhr.setRequestHeader('Content-Type', 'application/json');
 
       xhr.upload.addEventListener('progress', (event) => {
