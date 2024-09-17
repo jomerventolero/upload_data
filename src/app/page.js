@@ -40,7 +40,7 @@ const Home = () => {
         membership: member.membership,
         joined_on: member.joined_on,
         due_on: member.due_on,
-        id: member.id,
+        id: member.id || uuidv4(),
         status: member.status,
         user_created: member.user_created || null,
         date_created: member.date_created,
