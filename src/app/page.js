@@ -8,7 +8,6 @@ import axios from "axios";
 const Home = () => {
   const [memberList, setMemberList] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [status, setStatus] = useState("");
   const url = "https://revive-recovery.com/flows/trigger/e02394e9-2a4b-4ba2-9f3b-afa3f126d17b";
 
   const handleSubmit = (e) => {
@@ -25,37 +24,84 @@ const Home = () => {
     
   };
 
+  function addDays(date, days) {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+  }
+
+  function currentDateTime() {
+    const datetime = new Date();
+    const formattedDate = datetime.toISOString();
+    return formattedDate;
+  }
+
+  function toDateISOString(dateOrig) {
+    const date = new Date(dateOrig);
+    if (isNaN(date.getTime())) {
+      throw Error ("Invalid Date Format!")
+    }
+    return date.toISOString();
+  }
+
+  function gymSelector(gym_id) {
+    const gymMap = {
+      BER: "BER",
+      BRO: "BRKV",
+      CMA: "CAB",
+      CMR: "CRO",
+      CRA: "CRAN",
+      DEE: "DEE",
+      FFE: "FFE",
+      FFW: "FFW",
+      LAN: "LANE",
+      MLY: "MAN",
+      MOV: "MONA",
+      PAK: "PKM",
+      SKA: "STK",
+      WEP: "WEP"
+    };
+  
+    const prefix = gym_id.substring(0, 3);
+    return gymMap[prefix] || "";
+  }
+
+  function totalDues(admin_fees, membership_fees) {
+    return parseFloat(admin_fees) + parseFloat(membership_fees);
+  }
 
   useEffect(() => {
     if (memberList.length) {
-      // Filter out empty or incomplete entries before transforming the list
-      const cleanedList = memberList.filter(member => member.first_name && member.id);
-  
-      // Transform the filtered data to match the second list format
-      const transformedList = cleanedList.map(member => ({
-        first_name: member.first_name,
-        surname: member.surname,
-        member_no: member.member_no,
-        total_fees_due: member.total_fees_due,
-        membership: member.membership,
-        joined_on: member.joined_on,
-        due_on: member.due_on,
-        id: member.id || uuidv4(),
-        status: member.status,
-        user_created: member.user_created || null,
-        date_created: member.date_created,
-        user_updated: member.user_updated || null,
-        date_updated: member.date_updated,
-        mobile_telephone: member.mobile_telephone,
-        admin_fees: member.admin_fees,
-        membership_fees_due: member.membership_fees_due,
-        paid_to: member.paid_to || null,
-        grace_period: member.grace_period || null,
-        note: member.note || null,
-        day_88: member.day_88,
-        gym_branch: member.gym_branch,
-        communication_attempt: member.communication_attempt || null,
-      }));
+      // Filter out empty or incomplete entries and transform the list in one pass
+      const transformedList = memberList.reduce((acc, member) => {
+        if (member.first_name) {
+          acc.push({
+            first_name: member.first_name || null,
+            surname: member.surname || null,
+            member_no: member.member_no || null,
+            total_fees_due: totalDues(member.admin_fees, member.membership_fees_due),
+            membership: member.membership || null,
+            joined_on: toDateISOString(member.joined_on) || null,
+            due_on: toDateISOString(member.due_on) || null,
+            id: member.id || uuidv4(),
+            status: "published",
+            user_created: null,
+            date_created: currentDateTime(),
+            user_updated: null,
+            date_updated: currentDateTime(),
+            mobile_telephone: member.mobile_telephone || null,
+            admin_fees: member.admin_fees,
+            membership_fees_due: member.membership_fees_due,
+            paid_to: member.paid_to || null,
+            grace_period: member.grace_period || null,
+            note: member.note || null,
+            day_88: addDays(member.due_on, 88),
+            gym_branch: gymSelector(member.member_no),
+            communication_attempt: member.communication_attempt || null,
+          });
+        }
+        return acc;
+      }, []);
   
       console.log(JSON.stringify(transformedList));
   
@@ -76,7 +122,7 @@ const Home = () => {
       });
     }
   }, [memberList]);
-
+  
 
   return (
     <>
@@ -139,36 +185,38 @@ const Home = () => {
               </div>
             </form>
             {uploadProgress > 0 && (
-                    <div className="bg-white px-4 py-4 rounded-lg flex flex-col gap-2 fixed justify-start top-2">
-                      <div className="flex flex-row gap-2">
-                        <progress className="self-center rounded-lg w-full" value={uploadProgress} max="100"> </progress>
-                        <p className="text-lg font-bold px-2">{uploadProgress}%</p>
-                      </div>
-                      {uploadProgress < 100 ? <p className="text-lg font-bold px-2">Processing...</p> : <p>Successfully Uploaded!</p>}
-                      <code className="bg-slate-800 text-white p-2 rounded-lg overflow-y-scroll max-h-[80vh] w-[800px] scroll-smooth">
-                        <table className="w-full">
-                          <tr className="border-[2px] border-slate-400">
-                            <th className="border-[2px] border-slate-400">First Name</th>
-                            <th className="border-[2px] border-slate-400">Last Name</th>
-                            <th className="border-[2px] border-slate-400">Gym Branch</th>
-                            <th className="border-[2px] border-slate-400">Status</th>
-                          </tr>
-                        {memberList.map((member, index) => (
-                          <tr className="border-[2px] border-slate-400" tabIndex={index}>
-                            <td className="border-[2px] border-slate-400 p-1">{member.first_name}</td>
-                            <td className="border-[2px] border-slate-400 p-1">{member.surname}</td>
-                            <td className="border-[2px] border-slate-400 p-1">{member["gym_branch.name"]}</td>
-                            <td className="border-[2px] border-slate-400 p-1">{member.status}</td>
-                          </tr>
-                        ))}
-                        </table>
-                      </code>
-                      <div className="flex flex-row gap-2">
-                        <a className="bg-violet-600 text-white p-2 rounded-lg cursor-pointer w-full flex justify-center" href="https://revive-recovery.com"><p>Back</p></a>
-                        <a className="bg-violet-200 text-violet-800 font-semibold p-2 rounded-lg cursor-pointer w-full flex justify-center" onClick={() => {setUploadProgress(0)}}><p>Upload again</p></a>
-                      </div>
-                      <p className="text-sm text-gray-500 text-center">© 2024 Revive Recovery - Anytime Fitness SEB Group</p>
-                    </div>
+              <div className="bg-white px-4 py-4 rounded-lg flex flex-col gap-2 fixed justify-start top-2">
+                <div className="flex flex-row gap-2">
+                  <progress className="self-center rounded-lg w-full" value={uploadProgress} max="100"> </progress>
+                  <p className="text-lg font-bold px-2">{uploadProgress}%</p>
+                </div>
+                {uploadProgress < 100 ? <p className="text-lg font-bold px-2">Processing...</p> : <p>Successfully Uploaded!</p>}
+                <code className="bg-slate-800 text-white p-2 rounded-lg overflow-y-scroll max-h-[80vh] w-[800px] scroll-smooth">
+                  <table className="w-full">
+                  <tbody>
+                    <tr className="border-[2px] border-slate-400">
+                      <th className="border-[2px] border-slate-400">First Name</th>
+                      <th className="border-[2px] border-slate-400">Last Name</th>
+                      <th className="border-[2px] border-slate-400">Gym Branch</th>
+                      <th className="border-[2px] border-slate-400">Status</th>
+                    </tr>
+                  {memberList.map((member, index) => (
+                    <tr className="border-[2px] border-slate-400" tabIndex={index}>
+                      <td className="border-[2px] border-slate-400 p-1">{member.first_name}</td>
+                      <td className="border-[2px] border-slate-400 p-1">{member.surname}</td>
+                      <td className="border-[2px] border-slate-400 p-1">{member.gym_branch}</td>
+                      <td className="border-[2px] border-slate-400 p-1">{member.status}</td>
+                    </tr>
+                  ))}
+                  </tbody>
+                  </table>
+                </code>
+                <div className="flex flex-row gap-2">
+                  <a className="bg-violet-600 text-white p-2 rounded-lg cursor-pointer w-full flex justify-center" href="https://revive-recovery.com"><p>Back</p></a>
+                  <a className="bg-violet-200 text-violet-800 font-semibold p-2 rounded-lg cursor-pointer w-full flex justify-center" onClick={() => {setUploadProgress(0)}}><p>Upload again</p></a>
+                </div>
+                <p className="text-sm text-gray-500 text-center">© 2024 Revive Recovery - Anytime Fitness SEB Group</p>
+              </div>
             )}
           </div>
         </div>
