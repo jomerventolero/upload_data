@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import Papa from "papaparse";
 import { v4 as uuidv4 } from "uuid"
 import axios from "axios";
+import Sidebar from '@/components/Sidebar/page';
 
 
 const Home = () => {
@@ -127,6 +128,7 @@ const Home = () => {
   return (
     <>
       <div className="max-w-3xl mx-auto mt-16 h-screen">
+        <Sidebar />
         <div className="">
           <div className="md:col-span-1">
             <div className="px-4 sm:px-0 mb-10">
