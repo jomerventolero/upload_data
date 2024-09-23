@@ -9,7 +9,15 @@ import Sidebar from '@/components/Sidebar/page';
 const Home = () => {
   const [memberList, setMemberList] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [processedMembers, setProcessedMembers] = useState([]);
   const url = "https://revive-recovery.com/flows/trigger/e02394e9-2a4b-4ba2-9f3b-afa3f126d17b";
+  const token = "Le0XdOnRiM2RUb9e33TEoa4lfUZNkyJj"
+
+  const config = {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -73,61 +81,72 @@ const Home = () => {
 
   useEffect(() => {
     if (memberList.length) {
-      // Filter out empty or incomplete entries and transform the list in one pass
-      const transformedList = memberList.reduce((acc, member) => {
-        if (member.first_name) {
-          acc.push({
-            first_name: member.first_name || null,
-            surname: member.surname || null,
-            member_no: member.member_no || null,
-            total_fees_due: totalDues(member.admin_fees, member.membership_fees_due),
-            membership: member.membership || null,
-            joined_on: toDateISOString(member.joined_on) || null,
-            due_on: toDateISOString(member.due_on) || null,
-            id: member.id || uuidv4(),
-            status: "published",
-            user_created: null,
-            date_created: currentDateTime(),
-            user_updated: null,
-            date_updated: currentDateTime(),
-            mobile_telephone: member.mobile_telephone || null,
-            admin_fees: member.admin_fees,
-            membership_fees_due: member.membership_fees_due,
-            paid_to: member.paid_to || null,
-            grace_period: member.grace_period || null,
-            note: member.note || null,
-            day_88: addDays(member.due_on, 88),
-            gym_branch: gymSelector(member.member_no),
-            communication_attempt: member.communication_attempt || null,
-          });
-        }
-        return acc;
-      }, []);
+      const checkAndUploadMembers = async () => {
+        for (const member of memberList) {
+          try {
+            const { first_name, surname } = member;
   
-      console.log(JSON.stringify(transformedList));
+            // Step 1: Check if the member exists via Directus API (GET request)
+            const existingMemberResponse = await axios.get('https://revive-recovery.com/items/current_members', {
+              params: {
+                filter: {
+                  first_name: { _eq: first_name },
+                  surname: { _eq: surname }
+                }
+              }
+            });
   
-      // Use Axios to send the POST request
-      axios.post(url, transformedList, {
-        onUploadProgress: (progressEvent) => {
-          if (progressEvent.lengthComputable) {
-            const percentage = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            setUploadProgress(percentage);
+            const transformedMember = {
+              id: uuidv4() || member.id,
+              first_name: member.first_name || null,
+              surname: member.surname || null,
+              member_no: member.member_no || null,
+              total_fees_due: totalDues(member.admin_fees, member.membership_fees_due),
+              membership: member.membership || null,
+              joined_on: toDateISOString(member.joined_on) || null,
+              due_on: toDateISOString(member.due_on) || null,
+              status: "published",
+              user_created: null,
+              date_created: currentDateTime(),
+              user_updated: null,
+              date_updated: currentDateTime(),
+              mobile_telephone: member.mobile_telephone || null,
+              admin_fees: member.admin_fees,
+              membership_fees_due: member.membership_fees_due,
+              paid_to: member.paid_to || null,
+              grace_period: member.grace_period || null,
+              note: member.note || null,
+              day_88: addDays(member.due_on, 88),
+              gym_branch: gymSelector(member.member_no),
+              communication_attempt: member.communication_attempt || null,
+            };
+  
+            if (existingMemberResponse.data.data.length > 0) {
+              // Member exists, update their data
+              const existingMemberId = existingMemberResponse.data.data[0].id;
+              await axios.patch(`https://revive-recovery.com/items/current_members/${existingMemberId}`, transformedMember);
+              setProcessedMembers(prev => [...prev, { ...member, status: 'Updated' }]);
+              console.log(`Updated Member: ${member.first_name} ${member.surname} - Member No: ${member.member_no}`)
+            } else {
+              // Member doesn't exist, add new member
+              await axios.post(`https://revive-recovery.com/items/current_members/`, transformedMember);
+              setProcessedMembers(prev => [...prev, { ...member, status: 'Created' }]);
+              console.log(`Created Member: ${member.first_name} ${member.surname} - Member No: ${member.member_no}`)
+            }
+          } catch (error) {
+            console.error(`Error with member ${member.first_name} ${member.surname}:`, error);
+            //setProcessedMembers(prev => [...prev, { ...member, status: 'Error' }]);
           }
         }
-      })
-      .then((response) => {
-        console.log('Success:', response.data);
-      })
-      .catch((error) => {
-        console.error('Error:', error);
-      });
+      };
+  
+      checkAndUploadMembers();
     }
   }, [memberList]);
   
 
   return (
-    <>
-      <div className="max-w-3xl mx-auto mt-16 h-screen">
+      <div className="max-w-3xl mx-auto mt-16 h-full w-full">
         <Sidebar />
         <div className="">
           <div className="md:col-span-1">
@@ -186,44 +205,41 @@ const Home = () => {
                 </div>
               </div>
             </form>
-            {uploadProgress > 0 && (
-              <div className="bg-white px-4 py-4 rounded-lg flex flex-col gap-2 fixed justify-start top-2">
-                <div className="flex flex-row gap-2">
-                  <progress className="self-center rounded-lg w-full" value={uploadProgress} max="100"> </progress>
-                  <p className="text-lg font-bold px-2">{uploadProgress}%</p>
-                </div>
-                {uploadProgress < 100 ? <p className="text-lg font-bold px-2">Processing...</p> : <p>Successfully Uploaded!</p>}
-                <code className="bg-slate-800 text-white p-2 rounded-lg overflow-y-scroll max-h-[80vh] w-[800px] scroll-smooth">
-                  <table className="w-full">
-                  <tbody>
-                    <tr className="border-[2px] border-slate-400">
-                      <th className="border-[2px] border-slate-400">First Name</th>
-                      <th className="border-[2px] border-slate-400">Last Name</th>
-                      <th className="border-[2px] border-slate-400">Gym Branch</th>
-                      <th className="border-[2px] border-slate-400">Status</th>
+            {processedMembers.length > 0 && (
+              <div className="mt-8 overflow-y-scroll h-screen">
+                <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Processed Members</h3>
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member No</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     </tr>
-                  {memberList.map((member, index) => (
-                    <tr className="border-[2px] border-slate-400" tabIndex={index}>
-                      <td className="border-[2px] border-slate-400 p-1">{member.first_name}</td>
-                      <td className="border-[2px] border-slate-400 p-1">{member.surname}</td>
-                      <td className="border-[2px] border-slate-400 p-1">{member.gym_branch}</td>
-                      <td className="border-[2px] border-slate-400 p-1">{member.status}</td>
-                    </tr>
-                  ))}
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {processedMembers.map((member, index) => (
+                      <tr key={index}>
+                        <td className="px-6 py-4 whitespace-nowrap">{`${member.first_name} ${member.surname}`}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">{member.member_no}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            member.status === 'Updated' ? 'bg-green-100 text-green-800' :
+                            member.status === 'Created' ? 'bg-blue-100 text-blue-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {member.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
-                  </table>
-                </code>
-                <div className="flex flex-row gap-2">
-                  <a className="bg-violet-600 text-white p-2 rounded-lg cursor-pointer w-full flex justify-center" href="https://revive-recovery.com"><p>Back</p></a>
-                  <a className="bg-violet-200 text-violet-800 font-semibold p-2 rounded-lg cursor-pointer w-full flex justify-center" onClick={() => {setUploadProgress(0)}}><p>Upload again</p></a>
-                </div>
-                <p className="text-sm text-gray-500 text-center">© 2024 Revive Recovery - Anytime Fitness SEB Group</p>
+                </table>
               </div>
             )}
+            
           </div>
         </div>
       </div>
-    </>
   );
 };
 

@@ -31,3 +31,27 @@ body {
     text-wrap: balance;
   }
 }
+
+/* Customize the scrollbar width */
+::-webkit-scrollbar {
+  width: 10px;  /* Width of the scrollbar */
+  height: 10px; /* Height of the horizontal scrollbar (for horizontal scroll) */
+}
+
+/* Customize the scrollbar track (background) */
+::-webkit-scrollbar-track {
+  background: #f1f1f1; /* Light gray track */
+  border-radius: 10px; /* Round the track corners */
+}
+
+/* Customize the scrollbar thumb (draggable part) */
+::-webkit-scrollbar-thumb {
+  background: #888; /* Darker gray thumb */
+  border-radius: 10px; /* Round the thumb corners */
+  border: 2px solid #f1f1f1; /* Adds padding to the thumb */
+}
+
+/* Hover effect for the scrollbar thumb */
+::-webkit-scrollbar-thumb:hover {
+  background: #555; /* Change thumb color when hovered */
+}
