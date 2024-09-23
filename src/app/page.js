@@ -10,7 +10,7 @@ const Home = () => {
   const [memberList, setMemberList] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [processedMembers, setProcessedMembers] = useState([]);
-  const url = "https://revive-recovery.com/flows/trigger/e02394e9-2a4b-4ba2-9f3b-afa3f126d17b";
+
   
 
   const config = {
