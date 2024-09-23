@@ -11,13 +11,6 @@ const Home = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [processedMembers, setProcessedMembers] = useState([]);
 
-  
-
-  const config = {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
