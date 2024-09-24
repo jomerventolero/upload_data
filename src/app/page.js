@@ -77,14 +77,15 @@ const Home = () => {
       const checkAndUploadMembers = async () => {
         for (const member of memberList) {
           try {
-            const { first_name, surname } = member;
+            const { first_name, surname, member_no } = member;
   
             // Step 1: Check if the member exists via Directus API (GET request)
             const existingMemberResponse = await axios.get('https://revive-recovery.com/items/current_members', {
               params: {
                 filter: {
                   first_name: { _eq: first_name },
-                  surname: { _eq: surname }
+                  surname: { _eq: surname },
+                  member_no: { _eq: member_no }, 
                 }
               }
             });
